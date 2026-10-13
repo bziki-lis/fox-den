@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Счётчик</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,400&family=Cormorant+SC:wght@500&display=swap" rel="stylesheet">
+<!--
+  Встраивание в Notion: counter.html?c=perevody | stranicy | sdelano | igry | otpuscheno
+  Цифры и подписи живут в counters.json — менять их там, страница подхватит сама.
+-->
+<style>
+  :root{ --bg:#191919; --ink:#ecdfc8; --muted:#b8aa92; --gold:#e2b26e; --line:rgba(226,178,110,.55); }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);overflow:hidden}
+  .card{position:relative;width:100vw;height:100vh;border-radius:12px;overflow:hidden;
+    background:var(--bg) center/cover no-repeat;color:var(--ink);
+    font-family:"Cormorant Garamond",Georgia,serif}
+  .card::before{content:"";position:absolute;inset:0;
+    background:linear-gradient(90deg,rgba(10,9,7,.78) 0%,rgba(10,9,7,.5) 34%,rgba(10,9,7,0) 62%)}
+  .txt{position:absolute;left:clamp(16px,6vw,72px);top:50%;transform:translateY(-50%);
+    max-width:min(46vw,520px);display:flex;flex-direction:column;gap:clamp(4px,1.4vh,14px)}
+  .num{font-weight:500;line-height:.9;letter-spacing:-.01em;font-size:clamp(40px,min(15vw,30vh),150px);
+    font-variant-numeric:lining-nums;text-shadow:0 2px 18px rgba(0,0,0,.5)}
+  .label{font-family:"Cormorant SC",Georgia,serif;letter-spacing:.16em;font-size:clamp(10px,min(1.8vw,4vh),17px);color:var(--gold)}
+  .rule{width:clamp(28px,5vw,56px);height:1px;background:var(--line);margin:clamp(2px,.8vh,8px) 0}
+  .line{font-style:italic;font-size:clamp(15px,min(3.2vw,7vh),32px);line-height:1.2;text-shadow:0 1px 10px rgba(0,0,0,.6)}
+  .foot{font-size:clamp(10px,min(1.6vw,3.4vh),15px);color:var(--muted);margin-top:clamp(0px,1vh,10px)}
+  .num,.txt>*{opacity:0;transform:translateY(6px);transition:opacity .6s ease,transform .6s ease}
+  .ready .txt>*{opacity:1;transform:none}
+  .ready .txt>*:nth-child(2){transition-delay:.08s}.ready .txt>*:nth-child(4){transition-delay:.16s}.ready .txt>*:nth-child(5){transition-delay:.24s}
+  @media (prefers-reduced-motion:reduce){ .num,.txt>*{transition:none} }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="txt">
+    <div class="num" id="num">…</div>
+    <div class="label" id="label"></div>
+    <div class="rule"></div>
+    <div class="line" id="line"></div>
+    <div class="foot" id="foot"></div>
+  </div>
+</div>
+<script>
+(function(){
+  const key=(new URLSearchParams(location.search).get('c')||'perevody').replace(/[^a-z]/g,'');
+  const card=document.getElementById('card');
+  card.style.backgroundImage=`url(img/counters/${key}.webp?v=1)`;
+  const MONTHS=['январе','феврале','марте','апреле','мае','июне','июле','августе','сентябре','октябре','ноябре','декабре'];
+  const now=new Date();
+  const fmt=n=>Number(n).toLocaleString('ru-RU').replace(/ /g,' ');
+  const fill=(s,d)=>(s||'').replace(/\{(\w+)\}/g,(_,k)=>k==='month'?MONTHS[now.getMonth()]:k==='year'?now.getFullYear():(d[k]!=null?fmt(d[k]):'…'));
+  fetch('counters.json?t='+Date.now()).then(r=>r.json()).then(all=>{
+    const d=all[key]||{};
+    if(d.value!=null) countUp(document.getElementById('num'),d.value);
+    document.getElementById('label').textContent=fill(d.label,d);
+    document.getElementById('line').textContent=fill(d.line,d);
+    const f=fill(d.foot,d); const fe=document.getElementById('foot'); fe.textContent=f; if(!f) fe.remove();
+  }).catch(()=>{}).finally(()=>requestAnimationFrame(()=>card.classList.add('ready')));
+  function countUp(el,target){
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches){el.textContent=fmt(target);return}
+    const t0=performance.now(),dur=1100;
+    (function step(t){const p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,3);el.textContent=fmt(Math.round(target*e));if(p<1)requestAnimationFrame(step)})(t0);
+  }
+})();
+</script>
+</body>
+</html>
