@@ -19,19 +19,19 @@
     font-family:"Cormorant Garamond",Georgia,serif}
   .card::before{content:"";position:absolute;inset:0;
     background:linear-gradient(90deg,rgba(10,9,7,.78) 0%,rgba(10,9,7,.5) 34%,rgba(10,9,7,0) 62%)}
-  .txt{position:absolute;left:clamp(16px,6vw,72px);top:50%;transform:translateY(-50%);
-    max-width:min(46vw,520px);display:flex;flex-direction:column;gap:clamp(4px,1.4vh,14px)}
+  .txt{position:absolute;left:clamp(14px,5vw,64px);top:50%;transform:translateY(-50%);
+    max-width:min(62vw,560px);display:flex;flex-direction:column;gap:clamp(4px,1.4vh,14px)}
   .num{font-weight:500;line-height:.9;letter-spacing:-.01em;font-size:clamp(40px,min(15vw,30vh),150px);
     font-variant-numeric:lining-nums;text-shadow:0 2px 18px rgba(0,0,0,.5)}
-  .label{font-family:"Cormorant SC",Georgia,serif;letter-spacing:.16em;font-size:clamp(10px,min(1.8vw,4vh),17px);color:var(--gold)}
+  .label{font-family:"Cormorant SC",Georgia,serif;letter-spacing:.12em;font-size:clamp(13px,min(3.4vw,6.4vh),22px);color:var(--gold)}
   .rule{width:clamp(28px,5vw,56px);height:1px;background:var(--line);margin:clamp(2px,.8vh,8px) 0}
-  .line{font-style:italic;font-size:clamp(15px,min(3.2vw,7vh),32px);line-height:1.2;text-shadow:0 1px 10px rgba(0,0,0,.6)}
-  .stats{display:flex;flex-wrap:wrap;align-items:flex-end;gap:clamp(6px,1.6vh,16px) clamp(16px,3.4vw,44px)}
+  .line{font-style:italic;font-size:clamp(17px,min(5vw,9vh),36px);line-height:1.2;text-shadow:0 1px 10px rgba(0,0,0,.6)}
+  .stats{display:flex;flex-wrap:nowrap;align-items:flex-end;gap:clamp(6px,1.6vh,16px) clamp(12px,4vw,44px)}
   .stat{display:flex;flex-direction:column;gap:clamp(3px,1vh,10px)}
-  .stat .num{font-size:clamp(30px,min(9vw,21vh),104px)}
+  .stat .num{font-size:clamp(24px,min(8.5vw,19vh),104px)}
   .num .approx{font-size:.45em;vertical-align:.55em;margin-right:.08em;opacity:.8}
-  .multi .txt{max-width:min(64vw,700px)}
-  .foot{font-size:clamp(10px,min(1.6vw,3.4vh),15px);color:var(--muted);margin-top:clamp(0px,1vh,10px)}
+  .multi .txt{max-width:min(86vw,720px)}
+  .foot{font-size:clamp(12px,min(3vw,5.6vh),19px);color:var(--muted);margin-top:clamp(0px,1vh,10px)}
   .num,.txt>*{opacity:0;transform:translateY(6px);transition:opacity .6s ease,transform .6s ease}
   .ready .txt>*,.ready .num{opacity:1;transform:none}
   .ready .txt>*:nth-child(2){transition-delay:.08s}.ready .txt>*:nth-child(4){transition-delay:.16s}.ready .txt>*:nth-child(5){transition-delay:.24s}.ready .txt>*:nth-child(6){transition-delay:.3s}
@@ -53,7 +53,7 @@
 (function(){
   const key=(new URLSearchParams(location.search).get('c')||'perevody').replace(/[^a-z]/g,'');
   const card=document.getElementById('card');
-  card.style.backgroundImage=`url(img/counters/${key}.webp?v=1)`;
+  card.style.backgroundImage=`url(img/counters/${key}.webp?v=2)`;
   const MONTHS=['январе','феврале','марте','апреле','мае','июне','июле','августе','сентябре','октябре','ноябре','декабре'];
   const now=new Date();
   const fmt=n=>Number(n).toLocaleString('ru-RU').replace(/ /g,' ');
