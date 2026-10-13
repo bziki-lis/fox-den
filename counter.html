@@ -26,10 +26,15 @@
   .label{font-family:"Cormorant SC",Georgia,serif;letter-spacing:.16em;font-size:clamp(10px,min(1.8vw,4vh),17px);color:var(--gold)}
   .rule{width:clamp(28px,5vw,56px);height:1px;background:var(--line);margin:clamp(2px,.8vh,8px) 0}
   .line{font-style:italic;font-size:clamp(15px,min(3.2vw,7vh),32px);line-height:1.2;text-shadow:0 1px 10px rgba(0,0,0,.6)}
+  .stats{display:flex;flex-wrap:wrap;align-items:flex-end;gap:clamp(6px,1.6vh,16px) clamp(16px,3.4vw,44px)}
+  .stat{display:flex;flex-direction:column;gap:clamp(3px,1vh,10px)}
+  .stat .num{font-size:clamp(30px,min(9vw,21vh),104px)}
+  .num .approx{font-size:.45em;vertical-align:.55em;margin-right:.08em;opacity:.8}
+  .multi .txt{max-width:min(64vw,700px)}
   .foot{font-size:clamp(10px,min(1.6vw,3.4vh),15px);color:var(--muted);margin-top:clamp(0px,1vh,10px)}
   .num,.txt>*{opacity:0;transform:translateY(6px);transition:opacity .6s ease,transform .6s ease}
-  .ready .txt>*{opacity:1;transform:none}
-  .ready .txt>*:nth-child(2){transition-delay:.08s}.ready .txt>*:nth-child(4){transition-delay:.16s}.ready .txt>*:nth-child(5){transition-delay:.24s}
+  .ready .txt>*,.ready .num{opacity:1;transform:none}
+  .ready .txt>*:nth-child(2){transition-delay:.08s}.ready .txt>*:nth-child(4){transition-delay:.16s}.ready .txt>*:nth-child(5){transition-delay:.24s}.ready .txt>*:nth-child(6){transition-delay:.3s}
   @media (prefers-reduced-motion:reduce){ .num,.txt>*{transition:none} }
 </style>
 </head>
@@ -38,6 +43,7 @@
   <div class="txt">
     <div class="num" id="num">…</div>
     <div class="label" id="label"></div>
+    <div class="stats" id="stats" hidden></div>
     <div class="rule"></div>
     <div class="line" id="line"></div>
     <div class="foot" id="foot"></div>
@@ -51,11 +57,27 @@
   const MONTHS=['январе','феврале','марте','апреле','мае','июне','июле','августе','сентябре','октябре','ноябре','декабре'];
   const now=new Date();
   const fmt=n=>Number(n).toLocaleString('ru-RU').replace(/ /g,' ');
-  const fill=(s,d)=>(s||'').replace(/\{(\w+)\}/g,(_,k)=>k==='month'?MONTHS[now.getMonth()]:k==='year'?now.getFullYear():(d[k]!=null?fmt(d[k]):'…'));
+  const fill=(s,d)=>(s||'').replace(/\{(\w+)\}/g,(_,k)=>k==='month'?MONTHS[now.getMonth()]:k==='year'?now.getFullYear():(d[k]==null?'…':typeof d[k]==='number'?fmt(d[k]):d[k]));
   fetch('counters.json?t='+Date.now()).then(r=>r.json()).then(all=>{
     const d=all[key]||{};
-    if(d.value!=null) countUp(document.getElementById('num'),d.value);
-    document.getElementById('label').textContent=fill(d.label,d);
+    if(Array.isArray(d.stats)){
+      card.classList.add('multi');
+      document.getElementById('num').remove(); document.getElementById('label').remove();
+      const box=document.getElementById('stats'); box.hidden=false;
+      d.stats.forEach(s=>{
+        const el=document.createElement('div'); el.className='stat';
+        el.innerHTML='<div class="num"></div><div class="label"></div>';
+        const n=el.firstChild;
+        if(s.approx){const a=document.createElement('span');a.className='approx';a.textContent='≈';n.appendChild(a)}
+        const v=document.createElement('span'); n.appendChild(v);
+        el.lastChild.textContent=fill(s.label,d);
+        box.appendChild(el);
+        if(s.value!=null) countUp(v,s.value); else v.textContent='…';
+      });
+    } else {
+      if(d.value!=null) countUp(document.getElementById('num'),d.value);
+      document.getElementById('label').textContent=fill(d.label,d);
+    }
     document.getElementById('line').textContent=fill(d.line,d);
     const f=fill(d.foot,d); const fe=document.getElementById('foot'); fe.textContent=f; if(!f) fe.remove();
   }).catch(()=>{}).finally(()=>requestAnimationFrame(()=>card.classList.add('ready')));
