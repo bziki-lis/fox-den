@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сад творчества</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,400&family=Cormorant+SC:wght@500&display=swap" rel="stylesheet">
+<!--
+  Год выпусков из «Верстака» (статус «опубликовано», по дате публикации).
+  Данные — trackers.json → sad.days: { "2026-09-12": [[название, "t"|"o"], …] }  t — перевод, o — всё остальное.
+  ?y=2025 открывает конкретный год.
+-->
+<style>
+  :root{ --bg:#191919; --ink:#ecdfc8; --muted:#9c907c; --faint:#2a2722; --gold:#e2b26e; --line:rgba(226,178,110,.38);
+         --g1:#3f5a3a; --g2:#5f8a52; --g3:#8fb57f; --g4:#e2b26e; --g5:#f29a52; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);overflow:hidden}
+  body{color:var(--ink);font-family:"Cormorant Garamond",Georgia,serif;display:flex;flex-direction:column;justify-content:center;
+    gap:clamp(8px,2.4vh,18px);padding:clamp(10px,2.6vw,24px) clamp(10px,3vw,28px)}
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:10px 16px;flex-wrap:wrap}
+  h1{font-weight:500;font-size:clamp(22px,min(7vw,11vh),42px);line-height:1}
+  .sub{font-family:"Cormorant SC",Georgia,serif;letter-spacing:.12em;color:var(--gold);font-size:clamp(13px,min(3.4vw,5vh),18px);margin-top:4px}
+  nav{display:flex;gap:2px}
+  nav button{background:none;border:0;color:var(--muted);font:inherit;font-size:clamp(15px,3.6vw,19px);cursor:pointer;padding:3px 9px;border-radius:6px}
+  nav button:hover,nav button:focus-visible{color:var(--ink);outline:none;background:rgba(226,178,110,.08)}
+  nav button[aria-pressed="true"]{color:var(--gold);box-shadow:inset 0 -1px 0 var(--gold);border-radius:6px 6px 0 0}
+  .wrap{--c:calc((100vw - 2*clamp(10px,3vw,28px) - 22px) / 53 - 2px);--c2:min(var(--c),calc((100vh - 170px)/8),18px)}
+  .months{display:grid;grid-template-columns:22px repeat(53,var(--c2));column-gap:2px;font-size:clamp(11px,2.6vw,15px);color:var(--muted);height:1.3em}
+  .months span{white-space:nowrap}
+  .grid{display:grid;grid-template-columns:22px repeat(53,var(--c2));grid-template-rows:repeat(7,var(--c2));grid-auto-flow:column;gap:2px}
+  .grid .dl{font-size:clamp(10px,2.4vw,13px);color:var(--muted);line-height:var(--c2);grid-column:1}
+  .c{border-radius:2px;background:var(--faint)}
+  .c.out{background:transparent}
+  .c.l1{background:var(--g1)}.c.l2{background:var(--g2)}.c.l3{background:var(--g3)}.c.l4{background:var(--g4)}.c.l5{background:var(--g5);box-shadow:0 0 6px rgba(242,154,82,.5)}
+  .c.today{outline:1px solid var(--gold);outline-offset:1px}
+  .c[data-k]{cursor:default}
+  footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 16px}
+  .line{font-style:italic;font-size:clamp(16px,min(4.4vw,6vh),25px)}
+  .stat{font-size:clamp(13px,min(3.4vw,4.6vh),18px);color:var(--muted)}
+  .stat em{font-style:normal;color:var(--ink)}
+  .key{display:inline-flex;gap:3px;vertical-align:middle;margin:0 6px}
+  .key i{width:10px;height:10px;border-radius:2px;display:block}
+  .tip{position:fixed;pointer-events:none;background:#0e0d0b;border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:15px;opacity:0;transition:opacity .15s;max-width:300px;z-index:5;line-height:1.25}
+  .tip b{font-weight:500;color:var(--gold);display:block;margin-bottom:2px}
+  @media (max-height:300px){ .sub,.line{display:none} }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Сад творчества</h1><div class="sub">что вышло из мастерской</div></div>
+  <nav id="years" aria-label="Год"></nav>
+</header>
+<div class="wrap">
+  <div class="months" id="months"></div>
+  <div class="grid" id="grid"></div>
+</div>
+<footer><div class="line" id="line"></div><div class="stat" id="stat"></div></footer>
+<div class="tip" id="tip"></div>
+<script>
+(function(){
+  const MS=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  const MG=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  const MP=['январе','феврале','марте','апреле','мае','июне','июле','августе','сентябре','октябре','ноябре','декабре'];
+  const pad=n=>String(n).padStart(2,'0');
+  const key=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const plural=(n,a,b,c)=>{const m=n%10,h=n%100;return h>10&&h<20?c:m===1?a:m>1&&m<5?b:c};
+  const today=new Date(), tKey=key(today);
+  const tip=document.getElementById('tip');
+  let days={}, years=[];
+  fetch('trackers.json?t='+Date.now()).then(r=>r.json()).then(all=>{
+    days=(all.sad||{}).days||{};
+    const ys=new Set(Object.keys(days).map(k=>+k.slice(0,4))); ys.add(today.getFullYear());
+    years=[...ys].sort();
+    const q=+new URLSearchParams(location.search).get('y');
+    const nav=document.getElementById('years');
+    years.forEach(y=>{const b=document.createElement('button');b.textContent=y;b.onclick=()=>draw(y);nav.appendChild(b)});
+    draw(years.includes(q)?q:today.getFullYear());
+  }).catch(()=>{document.getElementById('line').textContent='Сад пока не прогрузился.'});
+
+  function lvl(n){return n>=5?5:n>=3?4:n}
+  function draw(y){
+    document.querySelectorAll('#years button').forEach(b=>b.setAttribute('aria-pressed',+b.textContent===y));
+    const grid=document.getElementById('grid'), months=document.getElementById('months');
+    grid.innerHTML=''; months.innerHTML='<span></span>';
+    // понедельник первой недели
+    const jan1=new Date(y,0,1); const start=new Date(y,0,1-((jan1.getDay()+6)%7));
+    ['пн','','ср','','пт','',''].forEach((t,i)=>{const s=document.createElement('div');s.className='dl';s.style.gridRow=i+1;s.textContent=t;grid.appendChild(s)});
+    let total=0, trans=0, other=0, byMonth=new Array(12).fill(0), active=0, lastM=-1;
+    for(let w=0;w<53;w++){
+      const m=document.createElement('span');
+      for(let d=0;d<7;d++){
+        const dt=new Date(start); dt.setDate(start.getDate()+w*7+d);
+        const k=key(dt), c=document.createElement('div'); c.className='c';
+        if(dt.getFullYear()!==y){c.classList.add('out')}
+        else{
+          if(d===0||(w===0&&dt.getDate()===1)){ if(dt.getMonth()!==lastM && dt.getDate()<=7){lastM=dt.getMonth();m.textContent=MS[lastM]} }
+          const items=days[k]||[];
+          if(items.length){c.classList.add('l'+lvl(items.length));c.dataset.k=k;total+=items.length;active++;byMonth[dt.getMonth()]+=items.length;
+            items.forEach(i=>i[1]==='t'?trans++:other++)}
+          if(k===tKey)c.classList.add('today');
+        }
+        grid.appendChild(c);
+      }
+      months.appendChild(m);
+    }
+    const best=byMonth.indexOf(Math.max(...byMonth));
+    const st=document.getElementById('stat');
+    st.innerHTML=total?`<em>${total}</em> ${plural(total,'выпуск','выпуска','выпусков')} за ${active} ${plural(active,'день','дня','дней')}`+
+      (trans&&other?` · ${trans} ${plural(trans,'перевод','перевода','переводов')} и ${other} ${plural(other,'другой','других','других')} ${plural(other,'выпуск','выпуска','выпусков')}`:'')+
+      ` · пышнее всего цвело в ${MP[best]}`:'в этом году пока тихо';
+    const L=total===0?'Земля отдыхает. Это тоже часть сада.':
+      total>=40?'Это уже не грядка, это оранжерея.':
+      y===today.getFullYear()?'Каждый квадратик — что-то, что теперь есть в мире.':'Что посажено, то выросло.';
+    document.getElementById('line').textContent=L;
+  }
+  document.addEventListener('pointerover',e=>{
+    const c=e.target.closest('.c[data-k]'); if(!c){tip.style.opacity=0;return}
+    const k=c.dataset.k, it=days[k]||[], [Y,M,D]=k.split('-').map(Number);
+    tip.innerHTML=`<b>${D} ${MG[M-1]}</b>`+it.slice(0,4).map(i=>esc(i[0])).join('<br>')+(it.length>4?`<br>и ещё ${it.length-4}`:'');
+    const r=c.getBoundingClientRect(); tip.style.opacity=1;
+    const tw=tip.offsetWidth, th=tip.offsetHeight;
+    tip.style.left=Math.max(6,Math.min(innerWidth-tw-6,r.left+r.width/2-tw/2))+'px';
+    tip.style.top=(r.top-th-8<4?r.bottom+8:r.top-th-8)+'px';
+  });
+  function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+})();
+</script>
+</body>
+</html>

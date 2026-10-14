@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Стена трофеев</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,400&family=Cormorant+SC:wght@500&display=swap" rel="stylesheet">
+<!--
+  Игры Steam, пройденные на 100%, из базы «Игровые миры».
+  Данные — trackers.json → trofei: { full:[[игра, ачивок, год]], near:[[игра, %, есть, всего]], earned, total, games }
+-->
+<style>
+  :root{ --bg:#191919; --ink:#ecdfc8; --muted:#9c907c; --gold:#e2b26e; --ember:#f29a52; --wood:#5a4632; --line:rgba(226,178,110,.38); }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);overflow:hidden}
+  body{color:var(--ink);font-family:"Cormorant Garamond",Georgia,serif;display:flex;align-items:center;
+    gap:clamp(14px,4vw,44px);padding:clamp(10px,2.6vw,26px) clamp(12px,3.6vw,36px)}
+  .txt{flex:none;display:flex;flex-direction:column;gap:clamp(3px,1vh,10px);max-width:38%}
+  .num{font-weight:500;line-height:.9;font-size:clamp(40px,min(12vw,24vh),120px);text-shadow:0 2px 18px rgba(0,0,0,.5);font-variant-numeric:lining-nums}
+  .label{font-family:"Cormorant SC",Georgia,serif;letter-spacing:.12em;color:var(--gold);font-size:clamp(13px,min(3.2vw,5.6vh),21px)}
+  .rule{width:clamp(28px,5vw,56px);height:1px;background:var(--line);margin:clamp(2px,.8vh,8px) 0}
+  .line{font-style:italic;font-size:clamp(16px,min(3.8vw,7vh),30px);line-height:1.2}
+  .foot{font-size:clamp(12px,min(2.8vw,4.6vh),18px);color:var(--muted)}
+  .foot em{font-style:normal;color:var(--ink)}
+  .wall{flex:1;min-width:0;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:clamp(8px,2.4vh,18px)}
+  .shelf{display:flex;align-items:flex-end;gap:clamp(2px,.6vw,6px);padding:0 6px;min-height:var(--h);
+    border-bottom:3px solid var(--wood);box-shadow:0 6px 10px -6px rgba(0,0,0,.8);position:relative}
+  .shelf::after{content:"";position:absolute;left:0;right:0;bottom:-8px;height:5px;background:linear-gradient(rgba(0,0,0,.35),transparent)}
+  .cup{flex:none;width:calc(var(--h)*.62*var(--s));height:calc(var(--h)*var(--s));color:var(--gold);cursor:default;
+    opacity:0;transform:translateY(8px);transition:opacity .5s ease,transform .5s ease}
+  .ready .cup{opacity:1;transform:none}
+  .cup:hover,.cup:focus-visible{color:#f5cd8d;filter:drop-shadow(0 0 6px rgba(226,178,110,.55));outline:none}
+  .cup.near{color:var(--muted)}
+  .cup svg{width:100%;height:100%;display:block}
+  .tip{position:fixed;pointer-events:none;background:#0e0d0b;border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:15px;opacity:0;transition:opacity .15s;max-width:280px;z-index:5;line-height:1.25}
+  .tip b{font-weight:500;color:var(--gold);display:block}
+  @media (max-aspect-ratio:1/1){ body{flex-direction:column;justify-content:center} .txt{max-width:none;text-align:center;align-items:center} .wall{flex:1;width:100%;min-height:0} }
+  @media (prefers-reduced-motion:reduce){ .cup{transition:none} }
+</style>
+</head>
+<body>
+<div class="txt">
+  <div class="num" id="num">…</div>
+  <div class="label" id="label">игр на 100%</div>
+  <div class="rule"></div>
+  <div class="line" id="line"></div>
+  <div class="foot" id="foot"></div>
+</div>
+<div class="wall" id="wall"></div>
+<div class="tip" id="tip"></div>
+<script>
+(function(){
+  const fmt=n=>Number(n).toLocaleString('ru-RU').replace(/\s/g,' ');
+  const plural=(n,a,b,c)=>{const m=n%10,h=n%100;return h>10&&h<20?c:m===1?a:m>1&&m<5?b:c};
+  const CUP='<svg viewBox="0 0 24 38" aria-hidden="true"><path d="M5 3h14v7a7 7 0 0 1-14 0z" fill="currentColor"/>'+
+    '<path d="M5 5H2.5v2.5A4.5 4.5 0 0 0 6 12M19 5h2.5v2.5A4.5 4.5 0 0 1 18 12" fill="none" stroke="currentColor" stroke-width="1.6"/>'+
+    '<path d="M10.5 17h3v8h-3z" fill="currentColor"/><path d="M6 25h12v3H6zM4 30h16v5H4z" fill="currentColor" opacity=".85"/></svg>';
+  const NEAR='<svg viewBox="0 0 24 38" aria-hidden="true"><path d="M5 3h14v7a7 7 0 0 1-14 0z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2.4 2"/>'+
+    '<path d="M10.5 17h3v8h-3zM6 25h12v3H6zM4 30h16v5H4z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2.4 2"/></svg>';
+  const tip=document.getElementById('tip'), wall=document.getElementById('wall');
+  fetch('trackers.json?t='+Date.now()).then(r=>r.json()).then(all=>{
+    const d=all.trofei||{}, full=d.full||[], near=d.near||[];
+    const n=full.length;
+    countUp(document.getElementById('num'),n);
+    document.getElementById('label').textContent=plural(n,'игра','игры','игр')+' на 100%';
+    const cats=full.filter(g=>/cat|kitten|кот/i.test(g[0])).length;
+    document.getElementById('line').textContent=cats>=3?`${cats} из них — про котиков. Котики считаются.`:'Каждая — честно выбитая до последней галочки.';
+    document.getElementById('foot').innerHTML=`<em>${fmt(d.earned)}</em> ачивок из ${fmt(d.total)} во всей библиотеке`+
+      (near.length?` · ${near.length} ${plural(near.length,'игра','игры','игр')} в шаге от кубка`:'');
+    // полки: кубки по порядку прохождения, высота — по числу ачивок
+    const items=full.map(g=>({name:g[0],sub:`${g[1]} ${plural(g[1],'ачивка','ачивки','ачивок')}`+(g[2]?` · ${g[2]}`:''),s:.55+.45*Math.min(1,Math.log10(g[1]+1)/2),near:false}))
+      .concat(near.map(g=>({name:g[0],sub:`${g[1]}% · ${g[2]} из ${g[3]} — почти`,s:.55+.45*Math.min(1,Math.log10(g[3]+1)/2),near:true})));
+    layout(items);
+    addEventListener('resize',()=>layout(items));
+    requestAnimationFrame(()=>requestAnimationFrame(()=>document.body.classList.add('ready')));
+  }).catch(()=>{document.getElementById('line').textContent='Полка пока не прогрузилась.'});
+
+  function layout(items){
+    wall.innerHTML='';
+    const W=wall.clientWidth-12, H=wall.clientHeight;
+    // подбираем число полок так, чтобы кубки были максимально крупными
+    let best=null;
+    for(let rows=1;rows<=6;rows++){
+      const per=Math.ceil(items.length/rows);
+      const hByW=(W-per*4)/(per*.62), hByH=(H-rows*22)/rows;
+      const h=Math.min(hByW,hByH,90);
+      if(!best||h>best.h) best={rows,per,h};
+    }
+    for(let r=0;r<best.rows;r++){
+      const sh=document.createElement('div'); sh.className='shelf'; sh.style.setProperty('--h',best.h+'px');
+      items.slice(r*best.per,(r+1)*best.per).forEach((it,i)=>{
+        const c=document.createElement('div'); c.className='cup'+(it.near?' near':''); c.tabIndex=0;
+        c.style.setProperty('--s',it.s); c.style.transitionDelay=(r*best.per+i)*18+'ms';
+        c.innerHTML=it.near?NEAR:CUP; c.dataset.n=it.name; c.dataset.s=it.sub; c.setAttribute('aria-label',it.name+', '+it.sub);
+        sh.appendChild(c);
+      });
+      wall.appendChild(sh);
+    }
+  }
+  function show(c){
+    if(!c){tip.style.opacity=0;return}
+    tip.innerHTML=`<b>${esc(c.dataset.n)}</b>${esc(c.dataset.s)}`;
+    const r=c.getBoundingClientRect(); tip.style.opacity=1;
+    const tw=tip.offsetWidth, th=tip.offsetHeight;
+    tip.style.left=Math.max(6,Math.min(innerWidth-tw-6,r.left+r.width/2-tw/2))+'px';
+    tip.style.top=(r.top-th-8<4?r.bottom+8:r.top-th-8)+'px';
+  }
+  document.addEventListener('pointerover',e=>show(e.target.closest('.cup')));
+  document.addEventListener('focusin',e=>show(e.target.closest('.cup')));
+  function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+  function countUp(el,t){
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches){el.textContent=t;return}
+    const t0=performance.now();(function s(x){const p=Math.min(1,(x-t0)/1000);el.textContent=Math.round(t*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(s)})(t0);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Баночки заботы</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,400&family=Cormorant+SC:wght@500&display=swap" rel="stylesheet">
+<!--
+  Чем я себя берегла: отметки «Забота» из базы «Дни», по месяцам.
+  Баночка наполняется долей записанных дней, где эта забота была.
+  Данные — trackers.json → zabota.months: { "2026-10": { n: дней записано, c: { забота: дней } } }
+  ?m=2026-09 открывает конкретный месяц.
+-->
+<style>
+  :root{ --bg:#191919; --ink:#ecdfc8; --muted:#9c907c; --gold:#e2b26e; --glass:rgba(236,223,200,.32); --line:rgba(226,178,110,.38); }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);overflow:hidden}
+  body{color:var(--ink);font-family:"Cormorant Garamond",Georgia,serif;display:flex;flex-direction:column;
+    padding:clamp(10px,2.6vw,24px) clamp(10px,3vw,28px);gap:clamp(6px,2vh,16px)}
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+  h1{font-weight:500;font-size:clamp(22px,min(7vw,10vh),42px);line-height:1}
+  .sub{font-family:"Cormorant SC",Georgia,serif;letter-spacing:.12em;color:var(--gold);font-size:clamp(13px,min(3.4vw,5vh),18px);margin-top:4px}
+  nav button{background:none;border:0;color:var(--muted);font:inherit;font-size:clamp(20px,5vw,28px);cursor:pointer;padding:2px 8px;border-radius:6px}
+  nav button:hover,nav button:focus-visible{color:var(--gold);outline:none;background:rgba(226,178,110,.08)}
+  nav button[disabled]{opacity:.25;cursor:default;background:none}
+  .shelf{flex:1;min-height:0;display:grid;grid-template-columns:repeat(8,1fr);gap:clamp(4px,1.4vw,14px);align-items:end}
+  .jar{display:flex;flex-direction:column;align-items:center;gap:clamp(2px,.8vh,8px);min-height:0;height:100%;justify-content:flex-end}
+  .jar svg{width:100%;max-width:92px;height:auto;max-height:calc(100% - 3.2em);overflow:visible}
+  .jar .lbl{font-size:clamp(12px,min(2.6vw,3.6vh),17px);color:var(--muted);text-align:center;line-height:1.1;min-height:2.2em}
+  .jar.on .lbl{color:var(--ink)}
+  .jar .fill{transition:transform 1.1s cubic-bezier(.2,.7,.2,1);transform-box:fill-box;transform-origin:50% 100%}
+  .jar .cnt{font-size:15px;fill:var(--bg);font-family:"Cormorant Garamond",Georgia,serif;font-weight:500}
+  footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 16px}
+  .line{font-style:italic;font-size:clamp(16px,min(4.4vw,6vh),25px)}
+  .stat{font-size:clamp(13px,min(3.4vw,4.6vh),18px);color:var(--muted)}
+  .stat em{font-style:normal;color:var(--ink)}
+  @media (max-aspect-ratio:5/4){ .shelf{grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr} }
+  @media (max-height:300px){ .sub,.line{display:none} }
+  @media (prefers-reduced-motion:reduce){ .jar .fill{transition:none} }
+</style>
+</head>
+<body>
+<header>
+  <div><h1 id="title">…</h1><div class="sub">чем я себя берегла</div></div>
+  <nav><button id="prev" aria-label="Предыдущий месяц">‹</button><button id="next" aria-label="Следующий месяц">›</button></nav>
+</header>
+<div class="shelf" id="shelf"></div>
+<footer><div class="line" id="line"></div><div class="stat" id="stat"></div></footer>
+<script>
+(function(){
+  const CARE=[['выспалась','#9a8ac0'],['поела по-человечески','#8fb57f'],['вышла на улицу','#7fa3c2'],['потягушки','#d29aa8'],
+              ['отдохнула без вины','#e2b26e'],['поболтала с людьми','#a8a090'],['поиграла','#f29a52'],['творила','#b98a62']];
+  const MONTHS=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  const plural=(n,a,b,c)=>{const m=n%10,h=n%100;return h>10&&h<20?c:m===1?a:m>1&&m<5?b:c};
+  const pad=n=>String(n).padStart(2,'0');
+  const now=new Date(), nowKey=`${now.getFullYear()}-${pad(now.getMonth()+1)}`;
+  let months={}, keys=[], cur;
+  // банка 60×90: горлышко, крышка, тело со скруглением
+  const BODY='M10 22 Q10 18 14 18 H46 Q50 18 50 22 V80 Q50 88 42 88 H18 Q10 88 10 80 Z';
+  fetch('trackers.json?t='+Date.now()).then(r=>r.json()).then(all=>{
+    months=(all.zabota||{}).months||{};
+    keys=Object.keys(months); if(!keys.includes(nowKey)) keys.push(nowKey); keys.sort();
+    const q=new URLSearchParams(location.search).get('m');
+    draw(keys.includes(q)?q:nowKey);
+  }).catch(()=>draw(nowKey));
+  document.getElementById('prev').onclick=()=>{const i=keys.indexOf(cur); if(i>0)draw(keys[i-1])};
+  document.getElementById('next').onclick=()=>{const i=keys.indexOf(cur); if(i<keys.length-1)draw(keys[i+1])};
+
+  function draw(k){
+    cur=k; const [y,m]=k.split('-').map(Number);
+    document.getElementById('title').textContent=MONTHS[m-1]+(y!==now.getFullYear()?' '+y:'');
+    const i=keys.indexOf(k); document.getElementById('prev').disabled=i<=0; document.getElementById('next').disabled=i>=keys.length-1;
+    const d=months[k]||{n:0,c:{}}, n=d.n||0;
+    const shelf=document.getElementById('shelf'); shelf.innerHTML='';
+    CARE.forEach(([name,col],j)=>{
+      const v=d.c[name]||0, p=n?v/n:0, id='j'+j;
+      const el=document.createElement('div'); el.className='jar'+(v?' on':'');
+      el.setAttribute('aria-label',`${name}: ${v} ${plural(v,'день','дня','дней')}`);
+      // уровень: от дна (88) до плеч (22)
+      const top=88-66*p;
+      el.innerHTML=`<svg viewBox="0 0 60 92" aria-hidden="true">
+        <defs><clipPath id="${id}"><path d="${BODY}"/></clipPath>
+          <linearGradient id="${id}g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".95"/><stop offset="1" stop-color="${col}" stop-opacity=".65"/></linearGradient></defs>
+        <g clip-path="url(#${id})"><rect class="fill" x="8" y="${top}" width="44" height="${88-top+2}" fill="url(#${id}g)" style="transform:scaleY(0)"/>
+          ${v?`<path d="M8 ${top} q11 -3 22 0 t22 0" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="1"/>`:''}</g>
+        <path d="${BODY}" fill="rgba(255,255,255,.025)" stroke="var(--glass)" stroke-width="1.6"/>
+        <path d="M15 28 V70" stroke="#fff" stroke-opacity=".12" stroke-width="2.4" stroke-linecap="round"/>
+        <rect x="15" y="8" width="30" height="9" rx="2.5" fill="${v?col:'#3a342c'}" opacity="${v?.85:1}"/>
+        <path d="M17 12.5h26" stroke="#000" stroke-opacity=".25"/>
+        ${v?(p>=.3?`<text class="cnt" x="30" y="${(top+88)/2+5}" text-anchor="middle">${v}</text>`
+                 :`<text class="cnt" x="30" y="${top-6}" text-anchor="middle" style="fill:var(--ink)">${v}</text>`):''}
+      </svg><div class="lbl">${name}</div>`;
+      shelf.appendChild(el);
+    });
+    requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelectorAll('.fill').forEach(f=>f.style.transform='')));
+    const tot=Object.values(d.c).reduce((a,b)=>a+b,0);
+    const top=Object.entries(d.c).sort((a,b)=>b[1]-a[1])[0];
+    document.getElementById('stat').innerHTML=n?`записано <em>${n}</em> ${plural(n,'день','дня','дней')}`+(top?` · чаще всего: ${top[0]}`:''):'дней пока не записано';
+    const filled=CARE.filter(c=>d.c[c[0]]).length;
+    document.getElementById('line').textContent=
+      !n?'Баночки ждут. Отметь день в «Днях» — что-нибудь упадёт.':
+      filled>=6?'Почти все баночки звенят. Так и надо.':
+      filled<=2?'Пара баночек — уже не ноль. Ноль бывает только у пустых.':
+      'Заботилась как могла. Это считается.';
+  }
+})();
+</script>
+</body>
+</html>
