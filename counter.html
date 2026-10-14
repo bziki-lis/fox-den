@@ -75,7 +75,8 @@
         if(s.value!=null) countUp(v,s.value); else v.textContent='…';
       });
     } else {
-      if(d.value!=null) countUp(document.getElementById('num'),d.value);
+      if(d.text){const n=document.getElementById('num');n.textContent=d.text;n.style.fontSize='calc(1.35 * clamp(40px,min(15vw,30vh),150px))';n.style.lineHeight='.8'}
+      else if(d.value!=null) countUp(document.getElementById('num'),d.value);
       document.getElementById('label').textContent=fill(d.label,d);
     }
     document.getElementById('line').textContent=fill(d.line,d);

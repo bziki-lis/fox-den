@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Опыт Лисы</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,400&family=Cormorant+SC:wght@500&display=swap" rel="stylesheet">
+<!--
+  Опыт из ачивок: редкость (5 / 15 / 50 / 100) × max(1, вес переводов). Каждые 100 — новый уровень.
+  Данные — counters.json → "opyt": { xp, cats: {категория: опыт} }.
+-->
+<style>
+  :root{ --bg:#191919; --ink:#ecdfc8; --muted:#a89a84; --gold:#e2b26e; --ember:#f29a52; --track:rgba(226,178,110,.14);
+         --c1:#e2b26e; --c2:#8fb57f; --c3:#9fb0c2; --c4:#c9867a; --c5:#7f8b98; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);overflow:hidden}
+  body{color:var(--ink);font-family:"Cormorant Garamond",Georgia,serif;display:flex;align-items:center;
+    padding:clamp(10px,3vw,28px) clamp(12px,4vw,40px);gap:clamp(14px,4vw,44px)}
+  .ring{position:relative;flex:none;width:min(42vw,78vh,260px);aspect-ratio:1}
+  .ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+  .ring .bar{transition:stroke-dashoffset 1.4s cubic-bezier(.2,.7,.2,1)}
+  .lvl{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+  .lvl b{font-weight:500;font-size:clamp(34px,min(15vw,26vh),96px);text-shadow:0 2px 18px rgba(0,0,0,.5)}
+  .lvl span{font-family:"Cormorant SC",Georgia,serif;letter-spacing:.14em;color:var(--gold);font-size:clamp(12px,min(3vw,5vh),18px);margin-top:.25em}
+  .txt{display:flex;flex-direction:column;gap:clamp(4px,1.2vh,12px);min-width:0}
+  .rank{font-style:italic;font-size:clamp(20px,min(5.6vw,9vh),40px);line-height:1.1}
+  .meta{font-size:clamp(13px,min(3.4vw,5vh),19px);color:var(--muted)}
+  .meta em{font-style:normal;color:var(--ink)}
+  .src{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--track);margin-top:clamp(4px,1vh,10px)}
+  .src i{display:block;height:100%}
+  .legend{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:clamp(12px,min(3vw,4.4vh),17px);color:var(--muted)}
+  .legend span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);margin-right:6px;vertical-align:.08em}
+  @media (max-aspect-ratio:1/1){ body{flex-direction:column;justify-content:center;text-align:center} .legend{justify-content:center} .ring{width:min(56vw,44vh)} }
+  @media (prefers-reduced-motion:reduce){ .ring .bar{transition:none} }
+</style>
+</head>
+<body>
+<div class="ring" aria-hidden="true">
+  <svg viewBox="0 0 100 100">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e2b26e"/><stop offset="1" stop-color="#f29a52"/></linearGradient></defs>
+    <circle cx="50" cy="50" r="44" fill="none" stroke="var(--track)" stroke-width="3"/>
+    <circle class="bar" id="bar" cx="50" cy="50" r="44" fill="none" stroke="url(#g)" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="276.46" stroke-dashoffset="276.46"/>
+  </svg>
+  <div class="lvl"><b id="lvl">…</b><span>уровень</span></div>
+</div>
+<div class="txt">
+  <div class="rank" id="rank"></div>
+  <div class="meta" id="meta"></div>
+  <div class="src" id="src"></div>
+  <div class="legend" id="legend"></div>
+</div>
+<script>
+(function(){
+  const RANKS=[[0,'Лисёнок'],[10,'Следопытка'],[20,'Хранительница троп'],[30,'Хозяйка норы'],[40,'Хранительница обители'],
+               [50,'Старая мудрая лиса'],[70,'Лиса, которую уже ничем не удивить'],[100,'Девятихвостая']];
+  const COLORS=['--c1','--c2','--c3','--c4','--c5'];
+  const fmt=n=>Number(n).toLocaleString('ru-RU').replace(/ /g,' ');
+  const plural=(n,a,b,c)=>{n=Math.abs(n)%100;const m=n%10;return n>10&&n<20?c:m===1?a:m>1&&m<5?b:c};
+  fetch('counters.json?t='+Date.now()).then(r=>r.json()).then(all=>{
+    const d=all.opyt||{}; const xp=d.xp||0, lvl=Math.floor(xp/100), cur=xp%100, left=100-cur;
+    let rank=RANKS[0], next=null;
+    RANKS.forEach((r,i)=>{ if(lvl>=r[0]){rank=r; next=RANKS[i+1]||null} });
+    document.getElementById('rank').textContent=rank[1];
+    const toRank = next ? next[0]*100-xp : null;
+    const same = toRank===left;
+    document.getElementById('meta').innerHTML=`<em>${fmt(xp)}</em> опыта<br>`+
+      (same ? `до ${lvl+1}-го уровня и звания «${next[1]}» — ${left}`
+            : `до ${lvl+1}-го уровня ${left}`+(toRank!=null&&toRank<=500?` · до звания «${next[1]}» ${fmt(toRank)}`:''));
+    // кольцо
+    const C=276.46, bar=document.getElementById('bar');
+    const L=document.getElementById('lvl');
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches){L.textContent=lvl}else{
+      const t0=performance.now();(function s(t){const p=Math.min(1,(t-t0)/1200);L.textContent=Math.round(lvl*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(s)})(t0)}
+    requestAnimationFrame(()=>requestAnimationFrame(()=>bar.style.strokeDashoffset=C*(1-cur/100)));
+    // откуда опыт
+    const cats=Object.entries(d.cats||{}).sort((a,b)=>b[1]-a[1]); const tot=cats.reduce((s,c)=>s+c[1],0)||1;
+    const top=cats.slice(0,4); const rest=cats.slice(4).reduce((s,c)=>s+c[1],0); if(rest) top.push(['остальное',rest]);
+    const src=document.getElementById('src'), lg=document.getElementById('legend');
+    top.forEach((c,i)=>{const v=`var(${COLORS[i]})`;
+      src.insertAdjacentHTML('beforeend',`<i style="width:${c[1]/tot*100}%;background:${v}"></i>`);
+      lg.insertAdjacentHTML('beforeend',`<span style="--c:${v}">${c[0]} ${Math.round(c[1]/tot*100)||'<1'}%</span>`)});
+  }).catch(()=>{});
+})();
+</script>
+</body>
+</html>
