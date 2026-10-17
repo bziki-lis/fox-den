@@ -1012,6 +1012,16 @@
         "2019"
       ],
       [
+        "Feather",
+        1,
+        "2020"
+      ],
+      [
+        "Life is Strange 2",
+        46,
+        "2020"
+      ],
+      [
         "Life is Strange™",
         60,
         "2020"
@@ -1022,23 +1032,13 @@
         "2020"
       ],
       [
-        "Life is Strange 2",
-        46,
-        "2020"
-      ],
-      [
-        "Feather",
-        1,
-        "2020"
-      ],
-      [
         "My Name is You and it's the only unusual thing in my life",
         14,
         "2021"
       ],
       [
-        "Monsters of Little Haven",
-        9,
+        "Bubble People",
+        19,
         "2022"
       ],
       [
@@ -1057,8 +1057,8 @@
         "2022"
       ],
       [
-        "Bubble People",
-        19,
+        "Monsters of Little Haven",
+        9,
         "2022"
       ],
       [
@@ -1067,47 +1067,7 @@
         "2025"
       ],
       [
-        "Hozy",
-        9,
-        "2026"
-      ],
-      [
-        "FIND KITTENS 6: After us",
-        20,
-        "2026"
-      ],
-      [
-        "FIND ALL: Christmas",
-        36,
-        "2026"
-      ],
-      [
-        "FIND KITTENS: The last of cats",
-        17,
-        "2026"
-      ],
-      [
-        "FIND ALL 7: Japan",
-        28,
-        "2026"
-      ],
-      [
-        "100 Cats Lost In Japan Find & Color",
-        4,
-        "2026"
-      ],
-      [
-        "100 Cats Lost in China Find & Color",
-        4,
-        "2026"
-      ],
-      [
-        "FIND ALL 8: The road to the Maya",
-        85,
-        "2026"
-      ],
-      [
-        "100 Cats Lost in Italy Find & Color",
+        "100 Cats Lost In Canada Find & Color",
         4,
         "2026"
       ],
@@ -1117,17 +1077,22 @@
         "2026"
       ],
       [
+        "100 Cats Lost In Japan Find & Color",
+        4,
+        "2026"
+      ],
+      [
         "100 Cats Lost In Poland Find & Color",
         4,
         "2026"
       ],
       [
-        "100 Cats Lost In Canada Find & Color",
+        "100 Cats Lost in China Find & Color",
         4,
         "2026"
       ],
       [
-        "100 Cats Lost in Turkey Find & Color",
+        "100 Cats Lost in Italy Find & Color",
         4,
         "2026"
       ],
@@ -1137,13 +1102,13 @@
         "2026"
       ],
       [
-        "FIND ALL 4: Magic",
-        81,
+        "100 Cats Lost in Turkey Find & Color",
+        4,
         "2026"
       ],
       [
-        "Wytchwood",
-        14,
+        "FIND ALL 4: Magic",
+        81,
         "2026"
       ],
       [
@@ -1152,18 +1117,47 @@
         "2026"
       ],
       [
+        "FIND ALL 7: Japan",
+        28,
+        "2026"
+      ],
+      [
+        "FIND ALL 8: The road to the Maya",
+        85,
+        "2026"
+      ],
+      [
+        "FIND ALL: Christmas",
+        36,
+        "2026"
+      ],
+      [
         "FIND KITTENS 3: Steampunk",
         18,
+        "2026"
+      ],
+      [
+        "FIND KITTENS 6: After us",
+        20,
+        "2026"
+      ],
+      [
+        "FIND KITTENS: The last of cats",
+        17,
+        "2026"
+      ],
+      [
+        "Hozy",
+        9,
+        "2026"
+      ],
+      [
+        "Wytchwood",
+        14,
         "2026"
       ]
     ],
     "near": [
-      [
-        "Phasmophobia",
-        93,
-        50,
-        54
-      ],
       [
         "The End of the Sun",
         92,
@@ -1171,8 +1165,14 @@
         40
       ],
       [
+        "Phasmophobia",
+        92,
+        50,
+        54
+      ],
+      [
         "FIND ALL",
-        88,
+        87,
         29,
         33
       ],
@@ -1198,12 +1198,12 @@
       "2026-10": {
         "n": 6,
         "c": {
+          "выспалась": 1,
           "отдохнула без вины": 3,
-          "поболтала с людьми": 1,
           "поиграла": 5,
-          "поела по-человечески": 3,
           "творила": 2,
-          "выспалась": 1
+          "поела по-человечески": 3,
+          "поболтала с людьми": 1
         }
       }
     }
