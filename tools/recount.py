@@ -140,7 +140,7 @@ def main():
             if (tot and got >= tot) or x.get('Достижения Steam') == '100%':
                 full.append([x.get('Игра'), int(tot or got), (x.get('date:Последний запуск:start') or '')[:4]])
             elif tot and 80 <= pct < 100:
-                near.append([x.get('Игра'), int(pct), int(got), int(tot)])
+                near.append([x.get('Игра'), min(99, round(pct)), int(got), int(tot)])
         full.sort(key=lambda r: (r[2] or '9999', r[0] or ''))
         near.sort(key=lambda r: -r[1])
         TR['trofei'] = {
