@@ -134,10 +134,13 @@ def main():
         g['foot'] = 'из них {sims} — в Симс. Кто бы сомневался'
         full, near = [], []
         for x in games:
-            if x.get('Достижения Steam') == '100%':
-                full.append([x.get('Игра'), int(num(x.get('Всего достижений')) or num(x.get('Достижения'))), (x.get('date:Последний запуск:start') or '')[:4]])
-            elif x.get('Всего достижений') and 80 <= num(x.get('Прогресс')) < 100:
-                near.append([x.get('Игра'), int(num(x.get('Прогресс'))), int(num(x.get('Достижения'))), int(num(x.get('Всего достижений')))])
+            got, tot = num(x.get('Достижения')), num(x.get('Всего достижений'))
+            # процент считаем сами: «Прогресс» в базе — формула, а метка «100%» может отставать
+            pct = got / tot * 100 if tot else 0
+            if (tot and got >= tot) or x.get('Достижения Steam') == '100%':
+                full.append([x.get('Игра'), int(tot or got), (x.get('date:Последний запуск:start') or '')[:4]])
+            elif tot and 80 <= pct < 100:
+                near.append([x.get('Игра'), int(pct), int(got), int(tot)])
         full.sort(key=lambda r: (r[2] or '9999', r[0] or ''))
         near.sort(key=lambda r: -r[1])
         TR['trofei'] = {
