@@ -126,7 +126,11 @@ def main():
         hours = sum(num(g.get('Часы Steam')) for g in games)
         sims = sum(num(g.get('Часы Steam')) for g in games if re.search(r'sims', g.get('Игра') or '', re.I))
         g = C['igry']
-        g['value'], g['sims'], g['updated'] = round(hours), round(sims), T
+        # часы в играх только растут: если в базе цифры старее виджета
+        # (свежую выгрузку Steam ещё не внесли в Notion), оставляем большие
+        g['value'] = max(round(hours), g.get('value') or 0)
+        g['sims'] = max(round(sims), g.get('sims') or 0)
+        g['updated'] = T
         g['foot'] = 'из них {sims} — в Симс. Кто бы сомневался'
         full, near = [], []
         for x in games:
