@@ -3,16 +3,15 @@
 
 Запуск:  python3 tools/recount.py <папка_с_выгрузками> [--today ГГГГ-ММ-ДД] [--only daily]
 
-В папке лежат JSON-файлы с результатами SQL-запросов к Notion (как их возвращает
-notion-query-data-sources: {"results": [...]} или просто список строк). Страницы
-одного запроса можно класть несколькими файлами с общим префиксом:
-  books*.json   — законченные книги: p, a, tags, note, year
-  screen*.json  — фильмы и сериалы одной группировкой: t, n, m, e, em
-  games*.json   — игры: name, hours, ach_state, ach, ach_total, progress, last
-  ach*.json     — ачивки: id, r, c, m
-  verstak*.json — верстак: id, title, t, s, v, d
-  days*.json    — дни: d, w, e, care
-  haos*.json    — хаос: s, closed
+В папке лежат JSON-ответы notion-query-data-sources в режиме view (как есть:
+{"results": [...], ...}). Страницы одного вида кладутся несколькими файлами
+с общим префиксом (media1.json, media2.json, …). Колонки — родные имена свойств Notion.
+  media*   — Сокровищница (книги, фильмы, сериалы)   view://7934b2fa-45db-4cc0-8d72-537dfb6a9980
+  games*   — Игровые миры                             view://3019421a-357e-4567-b00c-fb2b7a05cf7b
+  verstak* — Верстак                                  view://a4ecd60f-404e-4178-8595-806989d0a045
+  ach*     — Ачивки                                   view://a809267f-856b-4a2a-8513-6b699a9ec082
+  days*    — Дни                                      view://f39e4877-ee90-452a-a884-abbae5fc7fc7
+  haos*    — Хаос                                     view://6bf6bb2f-cbd2-4cf8-81bc-1e7fc6577860
 Чего нет в папке — того блок не трогаем (старые цифры остаются).
 Пишет counters.json, trackers.json, days.json в корне репозитория.
 """
@@ -82,18 +81,21 @@ def main():
     log = []
 
     # ---------- книги ----------
-    books = load(a.src, 'books')
-    if books is not None:
+    media = load(a.src, 'media')
+    books = screen = None
+    if media is not None:
+        books = [m for m in media if m.get('Тип') == 'книга' and m.get('Статус') in DONE_MEDIA]
+        screen = [m for m in media if (m.get('Тип') == 'фильм' and m.get('Статус') in DONE_MEDIA) or m.get('Тип') == 'сериал']
         pages = audio = py = ay = 0.0
         for b in books:
-            tags = jlist(b.get('tags'))
-            note = (b.get('note') or '').lower()
-            year = int(num(b.get('year'))) if b.get('year') else None
-            p = num(b.get('p'))
+            tags = jlist(b.get('Теги'))
+            note = (b.get('Заметка') or '').lower()
+            year = int(num(b.get('Год прочтения'))) if b.get('Год прочтения') else None
+            p = num(b.get('Страниц'))
             # аудио считаем, только если реально слушала: чистая аудиокнига
             # или в заметке «прослушана» / «аудиокнига»
             listened = 'аудио' in tags and ('текст' not in tags or 'прослуш' in note or 'аудиокниг' in note)
-            h = num(b.get('a')) if listened else 0.0
+            h = num(b.get('Аудио (часов)')) if listened else 0.0
             pages += p; audio += h
             if year == today.year:
                 py += p; ay += h
@@ -104,16 +106,15 @@ def main():
         log.append(f'книги: {round(pages)} стр., {round(audio)} ч; за год {round(py)} стр., {round(ay)} ч')
 
     # ---------- кино ----------
-    screen = load(a.src, 'screen')
     film_h = series_h = None
     if screen is not None:
-        f = [r for r in screen if r.get('t') == 'фильм']
-        s_ = [r for r in screen if r.get('t') == 'сериал']
-        films = sum(num(r.get('n')) for r in f)
-        film_h = sum(num(r.get('m')) for r in f) / 60
-        series = sum(num(r.get('n')) for r in s_)
-        eps = sum(num(r.get('e')) for r in s_)
-        series_h = sum(num(r.get('em')) for r in s_) / 60
+        f = [r for r in screen if r.get('Тип') == 'фильм']
+        s_ = [r for r in screen if r.get('Тип') == 'сериал']
+        films = len(f)
+        film_h = sum(num(r.get('Минут')) for r in f) / 60
+        series = len(s_)
+        eps = sum(num(r.get('Серий просмотрено')) for r in s_)
+        series_h = sum(num(r.get('Минут')) * num(r.get('Серий просмотрено')) for r in s_) / 60
         k = C['kino']
         k['stats'][0]['value'], k['stats'][1]['value'], k['stats'][2]['value'] = round(films), round(series), round(eps)
         k['hours'], k['updated'] = round(film_h + series_h), T
@@ -122,29 +123,29 @@ def main():
     # ---------- игры и трофеи ----------
     games = load(a.src, 'games')
     if games is not None:
-        hours = sum(num(g.get('hours')) for g in games)
-        sims = sum(num(g.get('hours')) for g in games if re.search(r'sims', g.get('name') or '', re.I))
+        hours = sum(num(g.get('Часы Steam')) for g in games)
+        sims = sum(num(g.get('Часы Steam')) for g in games if re.search(r'sims', g.get('Игра') or '', re.I))
         g = C['igry']
         g['value'], g['sims'], g['updated'] = round(hours), round(sims), T
         g['foot'] = 'из них {sims} — в Симс. Кто бы сомневался'
         full, near = [], []
         for x in games:
-            if x.get('ach_state') == '100%':
-                full.append([x.get('name'), int(num(x.get('ach_total')) or num(x.get('ach'))), (x.get('last') or '')[:4]])
-            elif x.get('ach_total') and 80 <= num(x.get('progress')) < 100:
-                near.append([x.get('name'), int(num(x.get('progress'))), int(num(x.get('ach'))), int(num(x.get('ach_total')))])
+            if x.get('Достижения Steam') == '100%':
+                full.append([x.get('Игра'), int(num(x.get('Всего достижений')) or num(x.get('Достижения'))), (x.get('date:Последний запуск:start') or '')[:4]])
+            elif x.get('Всего достижений') and 80 <= num(x.get('Прогресс')) < 100:
+                near.append([x.get('Игра'), int(num(x.get('Прогресс'))), int(num(x.get('Достижения'))), int(num(x.get('Всего достижений')))])
         full.sort(key=lambda r: (r[2] or '9999', r[0] or ''))
         near.sort(key=lambda r: -r[1])
         TR['trofei'] = {
             'full': full, 'near': near[:4],
-            'earned': int(sum(num(x.get('ach')) for x in games)),
-            'total': int(sum(num(x.get('ach_total')) for x in games)),
+            'earned': int(sum(num(x.get('Достижения')) for x in games)),
+            'total': int(sum(num(x.get('Всего достижений')) for x in games)),
             'games': len(games),
         }
         log.append(f'игры: {round(hours)} ч (Симс {round(sims)}); кубков {len(full)}')
 
     # ---------- время в чужих мирах ----------
-    if books is not None or screen is not None or games is not None:
+    if media is not None or games is not None:
         st = C['stranicy']['stats']
         kh = C['kino'].get('hours') or 0
         total = (C['igry'].get('value') or 0) + kh + (st[1]['value'] or 0) + (st[0]['value'] or 0) / 60
@@ -160,15 +161,15 @@ def main():
         sad = collections.defaultdict(list)
         mods = 0
         for r in verstak:
-            is_tr = r.get('t') == 'перевод мода'
-            weight[pid(r.get('id'))] = max(1, num(r.get('v')) or 1) if is_tr else 0
-            if r.get('s') != 'опубликовано':
+            is_tr = r.get('Тип') == 'перевод мода'
+            weight[pid(r.get('url'))] = max(1, num(r.get('Версий')) or 1) if is_tr else 0
+            if r.get('Статус') != 'опубликовано':
                 continue
             if is_tr:
                 mods += 1
-            d = (r.get('d') or '')[:10]
+            d = (r.get('date:Дата публикации:start') or '')[:10]
             if d:
-                sad[d].append([r.get('title') or '', 't' if is_tr else 'o'])
+                sad[d].append([r.get('Название') or '', 't' if is_tr else 'o'])
         TR['sad'] = {'days': dict(sorted(sad.items())), 'total': sum(len(v) for v in sad.values())}
         C['perevody']['mods'] = mods
         log.append(f'верстак: {mods} модов, в саду {TR["sad"]["total"]} выпусков')
@@ -178,9 +179,9 @@ def main():
     if ach is not None and verstak is not None:
         cats = collections.Counter()
         for r in ach:
-            pts = RARITY.get(r.get('r'), 5)
-            w = sum(weight.get(pid(u), 0) for u in jlist(r.get('m')))
-            cats[r.get('c') or 'другое'] += pts * max(1, w)
+            pts = RARITY.get(r.get('Редкость'), 5)
+            w = sum(weight.get(pid(u), 0) for u in jlist(r.get('Из мастерской')))
+            cats[r.get('Категория') or 'другое'] += pts * max(1, w)
         o = C['opyt']
         o['xp'], o['cats'], o['updated'] = int(sum(cats.values())), {k: int(v) for k, v in cats.items()}, T
         log.append(f'опыт: {o["xp"]}')
@@ -192,20 +193,20 @@ def main():
     if days is not None:
         out, months = [], collections.defaultdict(lambda: {'n': 0, 'c': collections.Counter()})
         for r in days:
-            d = (r.get('d') or '')[:10]
+            d = (r.get('date:Дата:start') or '')[:10]
             if not d:
                 continue
             rec = {'d': d}
-            w = (r.get('w') or '')
+            w = (r.get('Погода внутри') or '')
             for i, name in enumerate(WEATHER):
                 if w.endswith(name):
                     rec['w'] = i + 1
-            if r.get('e') in ENERGY:
-                rec['e'] = ENERGY.index(r.get('e'))
+            if r.get('Энергия') in ENERGY:
+                rec['e'] = ENERGY.index(r.get('Энергия'))
             out.append(rec)
             m = months[d[:7]]
             m['n'] += 1
-            for c in jlist(r.get('care')):
+            for c in jlist(r.get('Забота')):
                 m['c'][c] += 1
         D = {'updated': T, 'days': sorted(out, key=lambda x: x['d'])}
         TR['zabota'] = {'months': {k: {'n': v['n'], 'c': dict(v['c'])} for k, v in sorted(months.items())}}
@@ -214,8 +215,8 @@ def main():
     # ---------- хаос: сделано и отпущено ----------
     haos = load(a.src, 'haos')
     if haos is not None:
-        done = sum(1 for r in haos if r.get('s') == 'Сделано' and (r.get('closed') or '')[:7] == month)
-        let_go = sum(1 for r in haos if r.get('s') == 'Отпущено' and (r.get('closed') or '') >= '2026-10-14')
+        done = sum(1 for r in haos if r.get('Статус') == 'Сделано' and (r.get('date:Закрыто:start') or '')[:7] == month)
+        let_go = sum(1 for r in haos if r.get('Статус') == 'Отпущено' and (r.get('date:Закрыто:start') or '') >= '2026-10-14')
         s = C['sdelano']
         if s.get('month') != month:
             s['month'], s['drugoe'] = month, 0
